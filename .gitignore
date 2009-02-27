@@ -1,0 +1,4 @@
+*.pyc
+.google_appengine
+.site
+_site
