@@ -12,6 +12,16 @@ import re
 import shutil
 import logging
 
+logger = logging.getLogger("kelvin")
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(levelname)s - %(message)s")
+ch.setFormatter(formatter)
+#logger.addHandler(ch)
+
+from datetime import datetime
+
 #from google.appengine.ext.webapp import template
 
 import textile
@@ -20,10 +30,6 @@ import yaml
 SOURCE_DIR = os.path.join(DIRNAME, '.site')
 DEST_DIR = os.path.join(DIRNAME, '_site')
 TEMPLATE_DIR = os.path.join(SOURCE_DIR, '_layouts')
-# TEMPLATE_DIRS = (
-#      os.path.join(SOURCE_DIR, '_layouts')
-# )
-
 
 from django import template
 from django.template import loader
@@ -40,19 +46,6 @@ settings.configure(
         'django.contrib.markup',
         )
     )
-#os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
-#register = template.Library()
-
-#os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
-#from django.templategoogle.appengine.ext.webapp.template import loader
-#print loader.get_template("post.html")
-
-# def render(template_file, values = {}):
-#         path = os.path.join(os.path.dirname(__file__), 'templates', template_file)
-#         return template.render(path, values)
-
-#template.add_to_builtins(__name__)
-#template.add_to_builtins('django.contrib.markup.templatetags.markup') #__name__)
 
 def is_page(dir, name):
     header = open(os.path.join(SOURCE_DIR, dir, name)).read(3)
@@ -100,16 +93,7 @@ class Page(File):
             self.data = yaml.load(m.group(1))
             self.body = self.content[len(m.group(0)):]
         else:
-            logging.debug("no match in %(content)s" % vars(self))
-
-#     def translate(self):
-# #        print("**** [%(name)s]" % vars(self))
-#         if re.search(r'\.textile$', self.name):
-# #            print("**** TRANSLATING: %(name)s" % vars(self))
-# #            print("**** %(name)s *****\n\n %(content)s\n\n ****" % vars(self))
-#             self.body = textile.textile(str(self.content))
-# #        else:
-#             self.body = self.content
+            logger.debug("no match in %(content)s" % vars(self))
 
     def output(self, site):
         outdir = self.mkdirs()
@@ -119,24 +103,17 @@ class Page(File):
                 s = tf.read()
             else:
                 s = self.body
-
-#                print "*** template\n%s\n*****" % s
             t = template.Template(s) #tf.read())
             data = {
                 'site':site,
                 'page':self
                 }
-            print site.posts
-#            data.update(self.data)
+            logger.debug(site.posts)
 #            f.write(t.render(template.Context(data))) #self.content)
             self.content = t.render(template.Context(data))
-            print "****\n%s\n****" % self.content
-#            else:
-#                self.content = self.body
-#            print("**** %(content)s" % vars(self))
-#            self.translate()
+            logger.debug("****\n%s\n****" % self.content)
             f.write(self.content)
-#            print ("writing source! %(name)s" % vars(self))
+#            logger.debug("writing source! %(name)s" % vars(self))
 
     def __getattr__(self, name):
         if self.data.has_key(name):
@@ -154,8 +131,13 @@ class Page(File):
 class Post(Page):
     def __init__(self, dir, name):
         Page.__init__(self, dir, name)
-    
-    def categories(self):
+#        m = re.match(r'^(\d+)-(\d+)-(\d+)-(.*)$', self.name)
+        m = re.match(r'^(\d+)-(\d+)-(\d+)-([^.]*).*$', self.name)
+        date_string = "%s %s %s" % (m.group(1), m.group(2), m.group(3))
+        self.date = datetime.strptime(date_string, "%Y %m %d")
+        self.url = "/%s/%s/%s/%s.html" % (m.group(1), m.group(2), m.group(3), m.group(4))
+        
+    def topics(self):
         return re.split(r'/', self.dir)[1:]
 
     def outdir(self):
@@ -180,9 +162,15 @@ class Site:
 
     def all_items(self):
         if self.items == None:
+            self.topics = { }
             self.items = []
             for i in self.walk():
                 self.items.append(i)
+                if isinstance(i, Post):
+                    for topic in i.topics():
+                        if not self.topics.has_key(topic):
+                            self.topics[topic] = []
+                        self.topics[topic].append(i)
         return self.items
             
     def walk(self):
@@ -209,14 +197,22 @@ class Site:
 
 def main():
     site = Site()
-#    for p in site.walk():
     for p in site.all_items():
-        print p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p)
-
-#        if hasattr(p, "translate"):
-#            getattr(p, "translate")()
-
+        logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
         p.output(site)
+    for topic in site.topics.keys():
+        logger.info("Creating topic: %s" % topic)
+        with open(os.path.join(TEMPLATE_DIR, "topic.html")) as f:
+            t = template.Template(f.read())
+            outdir = os.path.join(DEST_DIR, "category", topic)
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
+            with open(os.path.join(outdir, "index.html"), "w") as outfile:
+                outfile.write(t.render(template.Context(
+                    {'topic' : topic,
+                     'posts' : site.topics[topic]}
+                    )))
+                        
 
 if __name__ == "__main__":
     main()
