@@ -98,10 +98,13 @@ class Page(File):
     def output(self, site):
         outdir = self.mkdirs()
         with open(self.destination(), 'w') as f:
-            if self.layout != 'nil':
+#            if self.layout != 'nil':
+            if self.data.has_key('layout'):
+                logger.debug("using layout: %s" % self.layout)
                 tf = open(os.path.join(TEMPLATE_DIR, self.layout))
                 s = tf.read()
             else:
+                logger.debug("using file as its own layout: [%s]" % self.body)
                 s = self.body
             t = template.Template(s) #tf.read())
             data = {
