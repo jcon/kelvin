@@ -165,18 +165,16 @@ class Site:
 
     def all_items(self):
         if self.items == None:
-            self.topics = { }
+            self.load_items()
             self.items = []
-            for i in self.walk():
-                self.items.append(i)
-                if isinstance(i, Post):
-                    for topic in i.topics():
-                        if not self.topics.has_key(topic):
-                            self.topics[topic] = []
-                        self.topics[topic].append(i)
+            self.items.extend(self.files)
+            self.items.extend(self.pages)
+            self.items.extend(self.posts)
+
         return self.items
-            
-    def walk(self):
+
+    def load_items(self):
+        self.topics = { }
         for root, dirs, files in os.walk(SOURCE_DIR):
             basedir = root[6:]
             if re.match('^\.site/.git', root):
@@ -188,14 +186,22 @@ class Site:
                 elif re.match(r'^\.site/_layouts', root):
                     continue
                 elif re.match(r'^\.site/_posts', root):
-                    self.posts.append(Post(basedir, f))
-                    yield self.posts[-1:][0]
+                    post = Post(basedir, f)
+                    self.posts.append(post)
+                    for topic in post.topics():
+                        if not self.topics.has_key(topic):
+                            self.topics[topic] = []
+                        self.topics[topic].append(post)
                 elif is_page(basedir, f):
                     self.pages.append(Page(basedir, f))
-                    yield self.pages[-1:][0]
                 else:
                     self.files.append(File(basedir, f))
-                    yield self.files[-1:][0]
+
+        def post_cmp(left, right):
+            return -1 * cmp(left.date, right.date)
+        self.posts.sort(post_cmp)
+        for topic in post.topics():
+            self.topics[topic].sort(post_cmp)
 
 
 def main():
@@ -212,7 +218,9 @@ def main():
                 os.makedirs(outdir)
             with open(os.path.join(outdir, "index.html"), "w") as outfile:
                 outfile.write(t.render(template.Context(
-                    {'topic' : topic,
+                    {'page': {'title':'All %s Posts' % topic},
+                     'site': site,
+                     'topic' : topic,
                      'posts' : site.topics[topic]}
                     )))
                         
