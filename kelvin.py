@@ -138,15 +138,30 @@ class Site:
         self.files = []
         self.items = None
 
-    def all_items(self):
-        if self.items == None:
-            self.load_items()
-            self.items = []
-            self.items.extend(self.files)
-            self.items.extend(self.pages)
-            self.items.extend(self.posts)
+    def transform(self):
+        self.load_items()
+        items = []
+        items.extend(self.posts)
+        items.extend(self.files)
+        items.extend(self.pages)
+        for p in items:
+            logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
+            p.output(self)
 
-        return self.items
+        for topic in self.topics.keys():
+            logger.info("Creating topic: %s" % topic)
+            with open(os.path.join(TEMPLATE_DIR, "topic.html")) as f:
+                t = template.Template(f.read())
+                outdir = os.path.join(DEST_DIR, "category", topic)
+                if not os.path.exists(outdir):
+                    os.makedirs(outdir)
+                with open(os.path.join(outdir, "index.html"), "w") as outfile:
+                    outfile.write(t.render(template.Context(
+                                {'page': {'title':'All %s Posts' % topic},
+                                 'site': self,
+                                 'topic' : topic,
+                                 'posts' : self.topics[topic]}
+                                )))
 
     def load_items(self):
         self.topics = { }
@@ -185,24 +200,7 @@ class Site:
 
 def main():
     site = Site()
-    for p in site.all_items():
-        logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
-        p.output(site)
-    for topic in site.topics.keys():
-        logger.info("Creating topic: %s" % topic)
-        with open(os.path.join(TEMPLATE_DIR, "topic.html")) as f:
-            t = template.Template(f.read())
-            outdir = os.path.join(DEST_DIR, "category", topic)
-            if not os.path.exists(outdir):
-                os.makedirs(outdir)
-            with open(os.path.join(outdir, "index.html"), "w") as outfile:
-                outfile.write(t.render(template.Context(
-                    {'page': {'title':'All %s Posts' % topic},
-                     'site': site,
-                     'topic' : topic,
-                     'posts' : site.topics[topic]}
-                    )))
-                        
+    site.transform()
 
 if __name__ == "__main__":
     main()
