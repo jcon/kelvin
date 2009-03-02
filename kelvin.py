@@ -47,10 +47,6 @@ settings.configure(
         )
     )
 
-def is_page(dir, name):
-    header = open(os.path.join(SOURCE_DIR, dir, name)).read(3)
-    return header == "---"
-
 class File:
     def __init__(self, dir, name):
         self.dir = dir
@@ -192,7 +188,7 @@ class Site:
                         if not self.topics.has_key(topic):
                             self.topics[topic] = []
                         self.topics[topic].append(post)
-                elif is_page(basedir, f):
+                elif self.is_page(basedir, f):
                     self.pages.append(Page(basedir, f))
                 else:
                     self.files.append(File(basedir, f))
@@ -200,8 +196,12 @@ class Site:
         def post_cmp(left, right):
             return -1 * cmp(left.date, right.date)
         self.posts.sort(post_cmp)
-        for topic in post.topics():
+        for topic in self.topics:
             self.topics[topic].sort(post_cmp)
+
+    def is_page(self, dir, name):
+        header = open(os.path.join(SOURCE_DIR, dir, name)).read(3)
+        return header == "---"
 
 
 def main():
