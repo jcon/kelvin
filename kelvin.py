@@ -137,6 +137,7 @@ class Site:
         self.pages = []
         self.files = []
         self.items = None
+        self.time = datetime.now()
 
     def transform(self):
         self.load_items()
