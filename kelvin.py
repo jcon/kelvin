@@ -51,36 +51,33 @@ class File:
     def __init__(self, dir, name):
         self.dir = dir
         self.name = name
+        self.outdir = os.path.join(DEST_DIR, self.dir)
+        self.outfile = self.name
 
     def open(self):
         return open(os.path.join(SOURCE_DIR, self.dir, self.name))
 
-    def outdir(self):
-        return os.path.join(DEST_DIR, self.dir)
-
-    def outfile(self):
-        return self.name
-
     def mkdirs(self):
-        if not os.path.exists(self.outdir()):
-            os.makedirs(self.outdir())
-        return self.outdir()
-
-    def source(self):
-        return os.path.join(SOURCE_DIR, self.dir, self.name)
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir)
+        return self.outdir
 
     def destination(self):
-        return os.path.join(self.outdir(), self.outfile())
+        return os.path.join(self.outdir, self.outfile)
 
     def output(self, site):
         outdir = self.mkdirs()
-        shutil.copy(self.source(), os.path.join(outdir, self.outfile()))
+        source = os.path.join(SOURCE_DIR, self.dir, self.name)
+        shutil.copy(source, self.destination()) 
 
 class Page(File):
     def __init__(self, dir, name):
         File.__init__(self, dir, name)
         self.content = self.open().read()
         self.read_data()
+        m = re.match(r'([^.]*)\.([^.]*)$', self.name)
+        if m and m.group(2) == "textile":
+            self.outfile = "%s.html" % m.group(1)
 
     def read_data(self):
         m = re.match(r'^---\s*\n(.*?)\n---\s*\n', 
@@ -120,13 +117,6 @@ class Page(File):
         else:
             raise AttributeError("%s is not found in %s" % (name, type(self)))
 
-    def outfile(self):
-        m = re.match(r'([^.]*)\.([^.]*)$', self.name)
-        if m and m.group(2) == "textile":
-            return "%s.html" % m.group(1)
-        else:
-            return self.name
-
 class Post(Page):
     def __init__(self, dir, name):
         Page.__init__(self, dir, name)
@@ -135,22 +125,11 @@ class Post(Page):
         date_string = "%s %s %s" % (m.group(1), m.group(2), m.group(3))
         self.date = datetime.strptime(date_string, "%Y %m %d")
         self.url = "/%s/%s/%s/%s.html" % (m.group(1), m.group(2), m.group(3), m.group(4))
+        self.outdir = os.path.join(DEST_DIR, m.group(1), m.group(2), m.group(3))
+        self.outfile = "%s.html" % m.group(4)
         
     def topics(self):
         return re.split(r'/', self.dir)[1:]
-
-    def outdir(self):
-        dirs = os.path.split(self.dir)
-        if len(dirs) > 1:
-            dir = dirs[1:]
-        else:
-            dir = '/'
-        m = re.match(r'^(\d+)-(\d+)-(\d+)-(.*)$', self.name)
-        return os.path.join(DEST_DIR, m.group(1), m.group(2), m.group(3))
-
-    def outfile(self):
-        m = re.match(r'^(\d+)-(\d+)-(\d+)-([^.]*).*$', self.name)
-        return "%s.html" % m.group(4)
 
 class Site:
     def __init__(self):
