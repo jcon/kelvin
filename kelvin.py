@@ -42,7 +42,6 @@ settings.configure(
         TEMPLATE_DIR,
         ),
     INSTALLED_APPS = (
-        'kelvin_tags',
         'django.contrib.markup',
         )
     )
