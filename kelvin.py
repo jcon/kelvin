@@ -11,6 +11,7 @@ for x in ('/', '/lib/django', '/lib/yaml/lib', '/lib/webob'):
 import re
 import shutil
 import logging
+from optparse import OptionParser
 
 logger = logging.getLogger("kelvin")
 logger.setLevel(logging.DEBUG)
@@ -24,10 +25,6 @@ from datetime import datetime
 
 import textile
 import yaml
-
-#SOURCE_DIR = os.path.join(DIRNAME, '.site')
-#DEST_DIR = os.path.join(DIRNAME, '_site')
-#TEMPLATE_DIR = os.path.join(SOURCE_DIR, '_layouts')
 
 from django import template
 from django.template import loader
@@ -200,10 +197,25 @@ class Site:
 
 
 def main():
-    SOURCE_DIR = os.path.join(DIRNAME, '.site')
-    DEST_DIR = os.path.join(DIRNAME, '_site')
+    usage = """
 
-    site = Site(SOURCE_DIR, DEST_DIR)
+Command Line variants:
+%prog [options]                                     # current dir -> _site
+%prog [options] <path to output>                    # current dir -> <output>
+%prog [options] <path to source> <path to output>   # <input> -> <output>
+"""
+    parser = OptionParser(usage = usage)
+    (options, args) = parser.parse_args()
+    
+    source_dir = os.path.join(DIRNAME, '.site')
+    dest_dir = os.path.join(DIRNAME, '_site')
+    if len(args) == 2:
+        source_dir = args[0]
+        dest_dir = args[1]
+    elif len(args) == 1:
+        dest_dir = args[0]
+
+    site = Site(source_dir, dest_dir)
     site.transform()
 
 if __name__ == "__main__":
