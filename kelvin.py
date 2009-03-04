@@ -33,7 +33,6 @@ from django import template
 from django.template import loader
 from django.conf import settings
 
-
 class File:
     def __init__(self, source_dir, dest_dir, dir, name):
         self.source_dir = source_dir
@@ -83,12 +82,10 @@ class Page(File):
 #            if self.layout != 'nil':
             if self.data.has_key('layout'):
                 logger.debug("using layout: %s" % self.layout)
-                tf = open(os.path.join(site.template_dir, self.layout))
-                s = tf.read()
+                t = loader.get_template(self.layout)
             else:
                 logger.debug("using file as its own layout: [%s]" % self.body)
-                s = self.body
-            t = template.Template(s) #tf.read())
+                t = loader.get_template_from_string(self.body)
             data = {
                 'site':site,
                 'page':self
@@ -124,23 +121,24 @@ class Site:
     def __init__(self, source_dir, dest_dir):
         self.source_dir = source_dir
         self.dest_dir = dest_dir
-        self.template_dir = os.path.join(self.source_dir, '_layouts')
         self.posts = []
         self.pages = []
         self.files = []
         self.items = None
         self.time = datetime.now()
         settings.configure(
-            DEBUG=True, 
-            TEMPLATE_DEBUG=True,
-            TEMPLATE_DIRS = (    
-                self.template_dir,
+            DEBUG = True, 
+            TEMPLATE_DEBUG = True,
+            TEMPLATE_LOADERS = (
+                'django.template.loaders.filesystem.load_template_source',
+                ),
+            TEMPLATE_DIRS = (
+                os.path.join(self.source_dir, '_layouts'),
                 ),
             INSTALLED_APPS = (
                 'django.contrib.markup',
                 )
             )
-
 
     def transform(self):
         self.load_items()
@@ -154,18 +152,17 @@ class Site:
 
         for topic in self.topics.keys():
             logger.info("Creating topic: %s" % topic)
-            with open(os.path.join(self.template_dir, "topic.html")) as f:
-                t = template.Template(f.read())
-                outdir = os.path.join(self.dest_dir, "category", topic)
-                if not os.path.exists(outdir):
-                    os.makedirs(outdir)
-                with open(os.path.join(outdir, "index.html"), "w") as outfile:
-                    outfile.write(t.render(template.Context(
-                                {'page': {'title':'All %s Posts' % topic},
-                                 'site': self,
-                                 'topic' : topic,
-                                 'posts' : self.topics[topic]}
-                                )))
+            outdir = os.path.join(self.dest_dir, "category", topic)
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
+            with open(os.path.join(outdir, "index.html"), "w") as outfile:
+                output = loader.render_to_string("topic.html",
+                                                 {'page': {'title':'All %s Posts' % topic},
+                                                  'site': self,
+                                                  'topic' : topic,
+                                                  'posts' : self.topics[topic]})
+                outfile.write(output)
+            
 
     def load_items(self):
         self.topics = { }
