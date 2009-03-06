@@ -4,31 +4,43 @@ from __future__ import with_statement
 
 import os
 import sys
-DIRNAME=os.path.dirname(__file__)
-for x in ('/', '/lib/django', '/lib/yaml/lib', '/lib/webob'):
-    sys.path.append(os.path.join(DIRNAME, '.google_appengine' + x))
-
 import re
 import shutil
 import logging
 from optparse import OptionParser
-
-logger = logging.getLogger("kelvin")
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(levelname)s - %(message)s")
-ch.setFormatter(formatter)
-#logger.addHandler(ch)
-
 from datetime import datetime
 
-import textile
+logger = logging.getLogger("kelvin")
+def enable_logging():
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+def load_app_engine_paths():
+    (drive, tail) = os.path.splitdrive(__file__)
+    gae_basedir = None
+    if drive == '':
+        gae_basedir = os.path.join('/', 'usr', 'local')
+    else:
+        gae_basedir = os.path.join(drive, 'Program Files')
+    app_engine_dir = os.path.join(gae_basedir, 'google_appengine')
+    for x in ((), ('lib', 'django'), ('lib', 'yaml', 'lib'), ('lib', 'webob')):
+        path = app_engine_dir
+        for c in x:
+            path = os.path.join(path, c)
+        sys.path.append(os.path.join(app_engine_dir, path))
+load_app_engine_paths()
+
 import yaml
 
 from django import template
 from django.template import loader
 from django.conf import settings
+
+import textile
 
 class File:
     def __init__(self, source_dir, dest_dir, dir, name):
@@ -205,10 +217,16 @@ Command Line variants:
 %prog [options] <path to source> <path to output>   # <input> -> <output>
 """
     parser = OptionParser(usage = usage)
+    # Enables trace logging.  our callback needs 4 parameters, so we just use a
+    # lambda function as a wrapper
+    parser.add_option("-d", "--debug",
+                      help = "print out debugging trace information",
+                      action = "callback",
+                      callback = lambda w, x, y, z: enable_logging())
     (options, args) = parser.parse_args()
-    
-    source_dir = os.path.join(DIRNAME, '.site')
-    dest_dir = os.path.join(DIRNAME, '_site')
+    dirname = os.path.dirname(__file__)
+    source_dir = os.path.join(dirname, '.site')
+    dest_dir = os.path.join(dirname, '_site')
     if len(args) == 2:
         source_dir = args[0]
         dest_dir = args[1]
