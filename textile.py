@@ -721,7 +721,7 @@ class Textile(object):
             re.compile(r'(\S)\"(?=\s|'+self.pnct+'|<|$)'),                       #  double closing
             re.compile(r'"'),                                               #  double opening
             re.compile(r'\b([A-Z][A-Z0-9]{2,})\b(?:[(]([^)]*)[)])'),        #  3+ uppercase acronym
-            re.compile(r'\b([A-Z][A-Z\'\-]+[A-Z])(?=[\s.,\)>])'),           #  3+ uppercase
+#            re.compile(r'\b([A-Z][A-Z\'\-]+[A-Z])(?=[\s.,\)>])'),           #  3+ uppercase
             re.compile(r'\b(\s{0,1})?\.{3}'),                                     #  ellipsis
             re.compile(r'(\s?)--(\s?)'),                                    #  em dash
             re.compile(r'\s-(?:\s|$)'),                                     #  en dash
@@ -739,7 +739,7 @@ class Textile(object):
             r'\1%(txt_quote_double_close)s',        #  double closing
             r'%(txt_quote_double_open)s',             #  double opening
             r'<acronym title="\2">\1</acronym>', #  3+ uppercase acronym
-            r'<span class="caps">\1</span>',     #  3+ uppercase
+#            r'<span class="caps">\1</span>',     #  3+ uppercase
             r'\1%(txt_ellipsis)s',                  #  ellipsis
             r'\1%(txt_emdash)s\2',               #  em dash
             r' %(txt_endash)s ',                 #  en dash
