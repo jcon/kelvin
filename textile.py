@@ -845,7 +845,7 @@ class Textile(object):
             text = self.table(text)
 
         text = self.span(text)
-        text = self.footnoteRef(text)
+#        text = self.footnoteRef(text)
         text = self.glyphs(text)
 
         return text.rstrip('\n')
