@@ -88,7 +88,6 @@ class Page(File):
     def output(self, site):
         outdir = self.mkdirs()
         with open(self.destination(), 'w') as f:
-#            if self.layout != 'nil':
             if self.data.has_key('layout'):
                 logger.debug("using layout: %s" % self.layout)
                 t = loader.get_template(self.layout)
@@ -100,7 +99,6 @@ class Page(File):
                 'page':self
                 }
             logger.debug(site.posts)
-#            f.write(t.render(template.Context(data))) #self.content)
             self.content = t.render(template.Context(data))
             logger.debug("****\n%s\n****" % self.content)
             f.write(self.content)
@@ -115,7 +113,6 @@ class Page(File):
 class Post(Page):
     def __init__(self, source_dir, dest_dir, dir, name):
         Page.__init__(self, source_dir, dest_dir, dir, name)
-#        m = re.match(r'^(\d+)-(\d+)-(\d+)-(.*)$', self.name)
         m = re.match(r'^(\d+)-(\d+)-(\d+)-([^.]*).*$', self.name)
         date_string = "%s %s %s" % (m.group(1), m.group(2), m.group(3))
         self.date = datetime.strptime(date_string, "%Y %m %d")
