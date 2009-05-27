@@ -7,7 +7,6 @@ import sys
 import re
 import shutil
 import logging
-from optparse import OptionParser
 from datetime import datetime
 
 logger = logging.getLogger("kelvin")
@@ -40,7 +39,13 @@ from django import template
 from django.template import loader
 from django.conf import settings
 
-import textile
+try:
+    import textile
+except:
+    my_dirs_parent = os.path.dirname(os.path.dirname(__file__))
+    libdir = os.path.join(my_dirs_parent, 'lib')
+    sys.path.append(libdir)
+    import textile
 
 class File:
     def __init__(self, source_dir, dest_dir, dir, name):
@@ -204,34 +209,3 @@ class Site:
         header = open(os.path.join(self.source_dir, dir, name)).read(3)
         return header == "---"
 
-
-def main():
-    usage = """
-
-Command Line variants:
-%prog [options]                                     # current dir -> _site
-%prog [options] <path to output>                    # current dir -> <output>
-%prog [options] <path to source> <path to output>   # <input> -> <output>
-"""
-    parser = OptionParser(usage = usage)
-    # Enables trace logging.  our callback needs 4 parameters, so we just use a
-    # lambda function as a wrapper
-    parser.add_option("-d", "--debug",
-                      help = "print out debugging trace information",
-                      action = "callback",
-                      callback = lambda w, x, y, z: enable_logging())
-    (options, args) = parser.parse_args()
-    dirname = os.path.dirname(__file__)
-    source_dir = os.path.join(dirname, '.site')
-    dest_dir = os.path.join(dirname, '_site')
-    if len(args) == 2:
-        source_dir = args[0]
-        dest_dir = args[1]
-    elif len(args) == 1:
-        dest_dir = args[0]
-
-    site = Site(source_dir, dest_dir)
-    site.transform()
-
-if __name__ == "__main__":
-    main()
