@@ -1,9 +1,20 @@
 #!/usr/bin/env python
 
 import os
+import sys
 from optparse import OptionParser
 import kelvin
 
+def maybe_extend_pythonpath(source_dir):
+    extension_dir = os.path.join(source_dir, '_extensions')
+    if os.path.exists(extension_dir):
+        kelvin.logger.info("extending classpath")
+        my_dir = os.path.dirname(__file__)
+        sys.path.append(os.path.realpath(my_dir))
+        sys.path.append(source_dir)
+        import _extensions
+    else:
+        kelvin.logger.info("no extension dir exists %s" % extension_dir)
 
 def main():
     usage = """
@@ -30,6 +41,8 @@ Command Line variants:
     elif len(args) == 1:
         dest_dir = args[0]
 
+    maybe_extend_pythonpath(source_dir)
+    
     site = kelvin.Site(source_dir, dest_dir)
     site.transform()
 

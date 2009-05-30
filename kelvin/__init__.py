@@ -11,6 +11,11 @@ from datetime import datetime
 
 logger = logging.getLogger("kelvin")
 def enable_logging():
+    """
+    Configures console logging for the application's logger.  By
+    default, logging operations will not output log statements
+    unless the logger has been configured.
+    """
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
@@ -39,15 +44,13 @@ from django import template
 from django.template import loader
 from django.conf import settings
 
-try:
-    import textile
-except:
-    my_dirs_parent = os.path.dirname(os.path.dirname(__file__))
-    libdir = os.path.join(my_dirs_parent, 'lib')
-    sys.path.append(libdir)
-    import textile
-
+    
 class File:
+    """
+    Base class for any time of object on the site.  The file object
+    provides basic file related options for translating a file from
+    the source folder to the destination site folder.
+    """
     def __init__(self, source_dir, dest_dir, dir, name):
         self.source_dir = source_dir
         self.dest_dir = dest_dir
@@ -57,22 +60,59 @@ class File:
         self.outfile = self.name
 
     def open(self):
+        """
+        Returns a file object referencing the source file option
+        suitable for reading.
+        """
         return open(os.path.join(self.source_dir, self.dir, self.name))
 
     def mkdirs(self):
+        """
+        Optionally creates the directories in this file's outdir
+        path.
+        """
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
         return self.outdir
 
     def destination(self):
+        """
+        The fully qualified destination path for this file.
+        """
         return os.path.join(self.outdir, self.outfile)
 
     def output(self, site):
+        """
+        Translates the source file to its destination form.  For
+        a plain file, this operation is a purely a copy.  For 
+        deratives of this class, additional transformation may 
+        occur by overriding this method.  This method takes a reference
+        to the underlying site so that it may apply site data
+        as part of its transformation.
+        """
         outdir = self.mkdirs()
         source = os.path.join(self.source_dir, self.dir, self.name)
         shutil.copy(source, self.destination()) 
 
 class Page(File):
+    """
+    A Page is a special type of file that contains a metadata header
+    and content.  In order to promote re-use, pages use Django's 
+    template mechnaism.
+    
+    The metadata header included in a page uses YAML for simplified
+    data definition.  Below is a sample header section.
+    The YAML metdata properties are accessible in the Django templates
+    under the page variable.  The only special YAML property is the
+    layout property.  If layout is defined, page will expect to find
+    a template under <site>/_layouts with that name.  If layout is
+    undefined, the page itself is considered a root Django template.
+    ---
+    title: My Interesting Page
+    blurb: Some text that I can refer to using {{ page.blurb }} in 
+    my template
+    ---
+    """
     def __init__(self, source_dir, dest_dir, dir, name):
         File.__init__(self, source_dir, dest_dir, dir, name)
         self.content = self.open().read()
@@ -82,6 +122,11 @@ class Page(File):
             self.outfile = "%s.html" % m.group(1)
 
     def read_data(self):
+        """
+        Read the metdata and parse it using the YAML parser. 
+        It's variables are exposed as attributes directly on this
+        page instance.
+        """
         m = re.match(r'^---\s*\n(.*?)\n---\s*\n', 
                      self.content, re.MULTILINE | re.DOTALL)
         if m:
@@ -91,6 +136,10 @@ class Page(File):
             logger.debug("no match in %(content)s" % vars(self))
 
     def output(self, site):
+        """
+        Translate this page in memory and output it to its
+        destination.
+        """
         outdir = self.mkdirs()
         with open(self.destination(), 'w') as f:
             if self.data.has_key('layout'):
@@ -152,6 +201,7 @@ class Site:
             )
 
     def transform(self):
+        logger.info("doing Site.transform()")
         self.load_items()
         items = []
         items.extend(self.posts)
@@ -161,18 +211,18 @@ class Site:
             logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
             p.output(self)
 
-        for topic in self.topics.keys():
-            logger.info("Creating topic: %s" % topic)
-            outdir = os.path.join(self.dest_dir, "category", topic)
-            if not os.path.exists(outdir):
-                os.makedirs(outdir)
-            with open(os.path.join(outdir, "index.html"), "w") as outfile:
-                output = loader.render_to_string("topic.html",
-                                                 {'page': {'title':'All %s Posts' % topic},
-                                                  'site': self,
-                                                  'topic' : topic,
-                                                  'posts' : self.topics[topic]})
-                outfile.write(output)
+        # for topic in self.topics.keys():
+        #     logger.info("Creating topic: %s" % topic)
+        #     outdir = os.path.join(self.dest_dir, "category", topic)
+        #     if not os.path.exists(outdir):
+        #         os.makedirs(outdir)
+        #     with open(os.path.join(outdir, "index.html"), "w") as outfile:
+        #         output = loader.render_to_string("topic.html",
+        #                                          {'page': {'title':'All %s Posts' % topic},
+        #                                           'site': self,
+        #                                           'topic' : topic,
+        #                                           'posts' : self.topics[topic]})
+        #         outfile.write(output)
             
 
     def load_items(self):
@@ -184,6 +234,8 @@ class Site:
 
             for f in files:
                 if re.match(r'(?:.*~$|\.DS_Store|\.gitignore)', f):
+                    continue
+                elif re.match(r'^.site/site\.py$', root):
                     continue
                 elif re.match(r'^\.site/_layouts', root):
                     continue
