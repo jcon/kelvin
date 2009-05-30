@@ -235,7 +235,7 @@ class Site:
             for f in files:
                 if re.match(r'(?:.*~$|\.DS_Store|\.gitignore)', f):
                     continue
-                elif re.match(r'^.site/site\.py$', root):
+                elif re.match(r'^\.site/_extensions$', root):
                     continue
                 elif re.match(r'^\.site/_layouts', root):
                     continue

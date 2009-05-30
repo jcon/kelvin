@@ -6,6 +6,10 @@ from optparse import OptionParser
 import kelvin
 
 def maybe_extend_pythonpath(source_dir):
+    """
+    Looks for the presence of an _extensions directory inside
+    the source website. If it's found, we'll import it.
+    """
     extension_dir = os.path.join(source_dir, '_extensions')
     if os.path.exists(extension_dir):
         kelvin.logger.info("extending classpath")
