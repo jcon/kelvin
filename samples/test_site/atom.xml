@@ -1,0 +1,28 @@
+---
+title: My Super-duper Blog!
+---
+<atom>
+    <title>{{ page.title }}</title>
+    <link href="http://newfoo.net/atom.xml" rel="self"/>
+    <link href="http://newfoo.net/"/>
+    <updated>{{ site.time|datetimeformat("%Y-%m-%dT%H:%i:%s") }}-05:00</updated>
+    <id>http://mysite.com</id>
+    <author>
+      <name>My Name</name>
+      <email>me@email.com</email>
+    </author>
+
+    {% for post in site.posts %}
+    <entry>
+      <title>{{ post.title|escape }}</title>
+      <link href="http://mysite.com{{ post.url }}"/>
+      <updated>{{ post.date|datetimeformat("%Y-%m-%dT%H:%i:%s") }}-05:00</updated>
+      <id>http://mysite.com{{ post.url }}</id>
+      <content type="html">
+      &lt;p&gt;{{ post.blurb }}&lt;/p&gt;
+      {{ post.body|escape }}
+      </content>
+    </entry>
+    {% endfor %}
+</atom>
+

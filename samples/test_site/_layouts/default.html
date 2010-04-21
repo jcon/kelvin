@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+<head>
+  <title>{{ page.title }}</title>
+</head>
+
+<body>
+<h1>Site Head</h1>
+
+{% block content %}
+{{ page.body }}
+{% endblock %}
+
+<h2>More Posts</h2>
+<ul>
+{% for post in site.posts %}
+  <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+{% endfor %}
+</ul>
+
+</body>
+</html>
