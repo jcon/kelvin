@@ -1,0 +1,9 @@
+[submodule "dependencies/django"]
+	path = dependencies/django
+	url = git://github.com/django/django.git
+[submodule "dependencies/pyyaml"]
+	path = dependencies/pyyaml
+	url = git://github.com/ingydotnet/pyyaml-mirror.git
+[submodule "dependencies/textile"]
+	path = dependencies/textile
+	url = git://github.com/jsamsa/python-textile.git
