@@ -23,9 +23,6 @@ def maybe_extend_pythonpath(source_dir):
 def main():
     usage = """
 
-Command Line variants:
-%prog [options]                                     # current dir -> _site
-%prog [options] <path to output>                    # current dir -> <output>
 %prog [options] <path to source> <path to output>   # <input> -> <output>
 """
     parser = OptionParser(usage = usage)
@@ -37,13 +34,13 @@ Command Line variants:
                       callback = lambda w, x, y, z: kelvin.enable_logging())
     (options, args) = parser.parse_args()
     dirname = os.path.dirname(__file__)
-    source_dir = os.path.join(dirname, '.site')
-    dest_dir = os.path.join(dirname, '_site')
-    if len(args) == 2:
+    if len(args) != 2:
+        parser.error("expected both an input path and an output path")
+        os.exit(1)       
+    elif len(args) == 2:
         source_dir = args[0]
         dest_dir = args[1]
-    elif len(args) == 1:
-        dest_dir = args[0]
+
 
     maybe_extend_pythonpath(source_dir)
     
