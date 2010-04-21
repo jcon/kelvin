@@ -24,18 +24,21 @@ def enable_logging():
     logger.addHandler(ch)
 
 def load_app_engine_paths():
-    (drive, tail) = os.path.splitdrive(__file__)
-    gae_basedir = None
-    if drive == '':
-        gae_basedir = os.path.join('/', 'usr', 'local')
-    else:
-        gae_basedir = os.path.join(drive, 'Program Files')
-    app_engine_dir = os.path.join(gae_basedir, 'google_appengine')
-    for x in ((), ('lib', 'django'), ('lib', 'yaml', 'lib'), ('lib', 'webob')):
-        path = app_engine_dir
-        for c in x:
-            path = os.path.join(path, c)
-        sys.path.append(os.path.join(app_engine_dir, path))
+    # (drive, tail) = os.path.splitdrive(__file__)
+    # gae_basedir = None
+    # if drive == '':
+    #     gae_basedir = os.path.join('/', 'usr', 'local')
+    # else:
+    #     gae_basedir = os.path.join(drive, 'Program Files')
+    # app_engine_dir = os.path.join(gae_basedir, 'google_appengine')
+    # for x in ((), ('lib', 'django'), ('lib', 'yaml', 'lib'), ('lib', 'webob')):
+    #     path = app_engine_dir
+    #     for c in x:
+    #         path = os.path.join(path, c)
+    #     sys.path.append(os.path.join(app_engine_dir, path))
+  sys.path.append(os.path.join('dependencies', 'django'))
+  sys.path.append(os.path.join('dependencies', 'pyyaml', 'lib'))
+  sys.path.append(os.path.join('dependencies', 'textile'))
 load_app_engine_paths()
 
 import yaml
@@ -142,6 +145,7 @@ class Page(File):
         """
         outdir = self.mkdirs()
         with open(self.destination(), 'w') as f:
+            logger.debug("data is %s" % self.data)
             if self.data.has_key('layout'):
                 logger.debug("using layout: %s" % self.layout)
                 t = loader.get_template(self.layout)
@@ -179,6 +183,7 @@ class Post(Page):
 
 class Site:
     def __init__(self, source_dir, dest_dir):
+        logger.debug("Site#init source %s; dest %s" % (source_dir, dest_dir))
         self.source_dir = source_dir
         self.dest_dir = dest_dir
         self.posts = []
@@ -210,36 +215,23 @@ class Site:
         for p in items:
             logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
             p.output(self)
-
-        # for topic in self.topics.keys():
-        #     logger.info("Creating topic: %s" % topic)
-        #     outdir = os.path.join(self.dest_dir, "category", topic)
-        #     if not os.path.exists(outdir):
-        #         os.makedirs(outdir)
-        #     with open(os.path.join(outdir, "index.html"), "w") as outfile:
-        #         output = loader.render_to_string("topic.html",
-        #                                          {'page': {'title':'All %s Posts' % topic},
-        #                                           'site': self,
-        #                                           'topic' : topic,
-        #                                           'posts' : self.topics[topic]})
-        #         outfile.write(output)
             
 
     def load_items(self):
         self.topics = { }
         for root, dirs, files in os.walk(self.source_dir):
-            basedir = root[6:]
+            basedir = root[len(self.source_dir) + 1:]
             if re.match('^\.site/.git', root):
                 continue
-
+            print "basedir: %s" % basedir
             for f in files:
                 if re.match(r'(?:.*~$|\.DS_Store|\.gitignore)', f):
                     continue
-                elif re.match(r'^\.site/_extensions$', root):
+                elif re.match(r'^_extensions$', basedir):
                     continue
-                elif re.match(r'^\.site/_layouts', root):
+                elif re.match(r'^_layouts', basedir):
                     continue
-                elif re.match(r'^\.site/_posts', root):
+                elif re.match(r'^_posts', basedir):
                     post = Post(self.source_dir, self.dest_dir, basedir, f)
                     self.posts.append(post)
                     for topic in post.topics():
@@ -258,6 +250,7 @@ class Site:
             self.topics[topic].sort(post_cmp)
 
     def is_page(self, dir, name):
-        header = open(os.path.join(self.source_dir, dir, name)).read(3)
-        return header == "---"
+		print "%s: %s" % (dir, name)
+		header = open(os.path.join(self.source_dir, dir, name)).read(3)
+		return header == "---"
 
