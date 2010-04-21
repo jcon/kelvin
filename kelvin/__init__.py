@@ -9,12 +9,16 @@ import shutil
 import logging
 from datetime import datetime
 
+import yaml
+from jinja2 import Environment, FileSystemLoader
+
 logger = logging.getLogger("kelvin")
 def enable_logging():
     """
     Configures console logging for the application's logger.  By
     default, logging operations will not output log statements
-    unless the logger has been configured.
+    unless the logger has been configured.  The main driver of
+    kelvin will control this with a commandline flag.
     """
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
@@ -23,31 +27,14 @@ def enable_logging():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-def load_app_engine_paths():
-    # (drive, tail) = os.path.splitdrive(__file__)
-    # gae_basedir = None
-    # if drive == '':
-    #     gae_basedir = os.path.join('/', 'usr', 'local')
-    # else:
-    #     gae_basedir = os.path.join(drive, 'Program Files')
-    # app_engine_dir = os.path.join(gae_basedir, 'google_appengine')
-    # for x in ((), ('lib', 'django'), ('lib', 'yaml', 'lib'), ('lib', 'webob')):
-    #     path = app_engine_dir
-    #     for c in x:
-    #         path = os.path.join(path, c)
-    #     sys.path.append(os.path.join(app_engine_dir, path))
-  sys.path.append(os.path.join('dependencies', 'django'))
-  sys.path.append(os.path.join('dependencies', 'pyyaml', 'lib'))
-  sys.path.append(os.path.join('dependencies', 'textile'))
-load_app_engine_paths()
 
-import yaml
 
-from django import template
-from django.template import loader
-from django.conf import settings
+def datetimeformat(value, format='%d %b %Y'):
+    """
+    Simple filter for jinja2 to help print out dates nicely
+    """
+    return value.strftime(format)
 
-    
 class File:
     """
     Base class for any time of object on the site.  The file object
@@ -148,21 +135,23 @@ class Page(File):
             logger.debug("data is %s" % self.data)
             if self.data.has_key('layout'):
                 logger.debug("using layout: %s" % self.layout)
-                t = loader.get_template(self.layout)
+                t = site.env.get_template(self.layout)
             else:
                 logger.debug("using file as its own layout: [%s]" % self.body)
-                t = loader.get_template_from_string(self.body)
+                t = site.env.from_string(self.body)
             data = {
+                'tuple':(('one', '1'), ('two', '2'), ('three', '3')),
                 'site':site,
                 'page':self
                 }
             logger.debug(site.posts)
-            self.content = t.render(template.Context(data))
+            self.content = t.render(site=site, page=self)
             logger.debug("****\n%s\n****" % self.content)
             f.write(self.content)
 #            logger.debug("writing source! %(name)s" % vars(self))
 
     def __getattr__(self, name):
+#        logging.debug("Page:getattr(%s):" % name)
         if self.data.has_key(name):
             return self.data[name]
         else:
@@ -180,6 +169,9 @@ class Post(Page):
         
     def topics(self):
         return re.split(r'/', self.dir)[1:]
+        
+    def __str__(self):
+        return "%s (%s)" % (self.title, self.url)
 
 class Site:
     def __init__(self, source_dir, dest_dir):
@@ -191,19 +183,11 @@ class Site:
         self.files = []
         self.items = None
         self.time = datetime.now()
-        settings.configure(
-            DEBUG = True, 
-            TEMPLATE_DEBUG = True,
-            TEMPLATE_LOADERS = (
-                'django.template.loaders.filesystem.load_template_source',
-                ),
-            TEMPLATE_DIRS = (
-                os.path.join(self.source_dir, '_layouts'),
-                ),
-            INSTALLED_APPS = (
-                'django.contrib.markup',
-                )
-            )
+        self.template_dirs = (
+            os.path.join(self.source_dir, '_layouts'),
+        )
+        self.env = Environment(loader=FileSystemLoader(self.template_dirs))
+        self.env.filters['datetimeformat'] = datetimeformat
 
     def transform(self):
         logger.info("doing Site.transform()")
@@ -256,3 +240,5 @@ class Site:
 		header = open(os.path.join(self.source_dir, dir, name)).read(3)
 		return header == "---"
 
+    def get_template(self, template):
+        return self.env.get_template(template)
