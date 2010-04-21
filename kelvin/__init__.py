@@ -221,11 +221,13 @@ class Site:
         self.topics = { }
         for root, dirs, files in os.walk(self.source_dir):
             basedir = root[len(self.source_dir) + 1:]
-            if re.match('^\.site/.git', root):
+            if re.match('^.git', basedir):
+                logging.debug("skipping tree %s" % basedir)
                 continue
-            print "basedir: %s" % basedir
+            logging.debug("basedir: %s" % basedir)
             for f in files:
-                if re.match(r'(?:.*~$|\.DS_Store|\.gitignore)', f):
+                if re.match(r'(?:.*~$|\.DS_Store|\.gitignore|\.git)', f):
+                    logging.debug("skipping file %s" % f)
                     continue
                 elif re.match(r'^_extensions$', basedir):
                     continue
@@ -250,7 +252,7 @@ class Site:
             self.topics[topic].sort(post_cmp)
 
     def is_page(self, dir, name):
-		print "%s: %s" % (dir, name)
+		logging.debug("is page: %s: %s" % (dir, name))
 		header = open(os.path.join(self.source_dir, dir, name)).read(3)
 		return header == "---"
 

@@ -2,3 +2,5 @@
 .google_appengine
 .site
 _site
+.DS_Store
+.ropeproject
