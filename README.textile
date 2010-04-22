@@ -2,6 +2,92 @@ h1. Kelvin
 
 Kelvin is a static website generator inspired by the beauty and simplicity of "Jekyll":http://github.com/mojombo/jekyll.  Kelvin allows you to write static websites using jinja2 templates, files and folders.  Like Jekyll, Kelvin is also blog-aware, so you can structured blog entries that are organized by topic.  I wrote Kelvin because I find jinja2 templates more intuitive than the Liquid templates used by Jekyll.
 
+h2. Usage
+
+Kelvin steals a bunch of ideas from Jekyll.  Kelvin operates on an input directory structure that looks similar to the following and produces a rendered website:
+
+*input:*
+
+* _layouts
+* _posts
+** python
+*** YYYY-MM-DD-article-title.html
+** category2
+* _extensions
+* about
+** index.html
+* index.html
+
+*output*
+
+* YYYY
+** MM
+*** DD
+**** article-title.html
+* about
+** index.html
+* index.html
+
+The directories beginning with an underscore ("_") all have special meaning, much like they do with Jekyll.  The _layouts directory holds all of the templates.  The _posts directory holds all of the categories and blog posts under each category.  The _extensions directory allows for customization.  You can do pretty much anything you want with extensions.  On my site, I made a simple extension for creating a category page generator and a textile filter for my jinja2 templates.
+
+The Kelvin engine will traverse through all folders/files on the site.  For all posts and other regular files, it'll look for a special metadata block beginning and ending with three dashes.  Each of these files (pages) will be sent through the template engine.  All other files, such as CSS, JavaScripts, or even non-template HTML files, will be copied to the output directory.
+
+A sample Kelvin website that contains two blog posts, a home page and a simple Atom feed file is included with the project is.
+
+h3. Invoking Kelvin
+
+Invoking Kelvin is very simple; it expects a source directory and an output directory.  It'll overwrite files as necessary in the output directory.  
+
+<notextile>
+ <pre class="brush: bash">
+    myserver% kelvin.py [path to source] [path to output]
+ </pre>
+</notextile>
+
+h3. Page File Format
+
+Below is an example page for Kelvin.  It's broken into two blocks: the YAML descriptor block (at the top) and the content block.  The YAML descriptor block contains all the metadata for the page.  Kelvin exposes all of these metadata attributes to the page template.  The engine only interprets the layout attribute.  If Kelvin encounters a page, but doesn't find a layout property, it assumes the page itself _IS_ the template.  This is handy for producing an RSS template for example.
+
+<notextile>
+    <pre><code>
+    ---
+    layout: post.html
+    title: My Cool Story
+    blurb: "Here is a blurb that I've written."
+    ---
+    
+    &lt;h1&gt;HTML Header&lt;/h1&gt;
+    
+    &lt;p&gt;A simple paragraphy&lt;/p&gt;
+    
+    etc.
+    </code></pre>
+</notextile>
+
+h4. Page Properties
+
+The following properties are available to all pages.
+
+* layout: Kelvin will look for a template under the _layouts directory matching this name
+* body: This is the translated body after.  It's useful when using template inheritance.
+
+h4. Post Properties
+
+Blog posts expose several other properties to templates in addition to the page properties:
+
+* url: The rendered URL relative to site root
+* date: The date of the post
+
+h2. Developing Against
+
+It's fairly straightforward to get setup using Kelvin.  You'll just need to grab the source from github and install its dependencies.  Kelvin requires the following packages: pyyaml 3.09, Jinja2 2.4.1.  You should be able to install both of these using __pip__.
+
+<notextile>
+ <pre class="brush: bash">
+    myserver% pip install pyyaml jinja2
+ </pre>
+</notextile>
+
 h2. License
 
 (The MIT License)
