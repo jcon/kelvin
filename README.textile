@@ -9,6 +9,7 @@ Kelvin steals a bunch of ideas from Jekyll.  Kelvin operates on an input directo
 *input:*
 
 * _layouts
+** category.html (optional)
 * _posts
 ** python
 *** YYYY-MM-DD-article-title.html
@@ -24,6 +25,11 @@ Kelvin steals a bunch of ideas from Jekyll.  Kelvin operates on an input directo
 ** MM
 *** DD
 **** article-title.html
+* category (optionally output if a category template is included in layouts)
+** python
+*** index.html
+** category2
+*** index.html
 * about
 ** index.html
 * index.html
