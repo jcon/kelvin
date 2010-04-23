@@ -12,7 +12,22 @@ from datetime import datetime
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+DEFAULT_SETTINGS = {
+    'CATEGORY_TEMPLATE': 'category.html',
+    'CATEGORY_OUTPUT_DIR': 'category',
+}
+
+class NullHandler(logging.Handler):
+    """
+    Simple bit-bucket handler to use for when debugging is not enabled
+    """
+    def emit(self, record):
+        """Discards all logging records"""
+        pass
+
 logger = logging.getLogger("kelvin")
+logger.addHandler(NullHandler())
+
 def enable_logging():
     """
     Configures console logging for the application's logger.  By
@@ -187,7 +202,18 @@ class Site:
         )
         self.env = Environment(loader=FileSystemLoader(self.template_dirs))
         self.env.filters['datetimeformat'] = datetimeformat
-
+        
+        self.settings = dict(DEFAULT_SETTINGS)
+        try:
+            # allow sites to override settings by adding all properties
+            # defined within _extensions.settings
+            from _extensions import settings
+            for setting in dir(settings):
+                if setting == setting.upper():
+                    self.settings[setting] = getattr(settings, setting)
+        except:
+            # In case someone needs to debug a problem in the site's settings files
+            logger.exception("no site specific settings or overrides found")         
 
     def transform(self):
         logger.info("doing Site.transform()")
@@ -200,7 +226,7 @@ class Site:
             logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
             p.output(self)
 
-        self.render_categories(self.categories, "category.html", "category")    
+        self.render_categories(self.categories, self.settings['CATEGORY_TEMPLATE'], self.settings['CATEGORY_OUTPUT_DIR'])    
     
     def render_categories(self, categories, template_name, basedir):
         try:
@@ -226,12 +252,12 @@ class Site:
         for root, dirs, files in os.walk(self.source_dir):
             basedir = root[len(self.source_dir) + 1:]
             if re.match('^.git', basedir):
-                logging.debug("skipping tree %s" % basedir)
+                logger.debug("skipping tree %s" % basedir)
                 continue
-            logging.debug("basedir: %s" % basedir)
+            logger.debug("basedir: %s" % basedir)
             for f in files:
                 if re.match(r'(?:.*~$|\.DS_Store|\.gitignore|\.git)', f):
-                    logging.debug("skipping file %s" % f)
+                    logger.debug("skipping file %s" % f)
                     continue
                 elif re.match(r'^_extensions$', basedir):
                     continue
@@ -256,7 +282,7 @@ class Site:
             self.categories[category].sort(post_cmp)
 
     def is_page(self, dir, name):
-		logging.debug("is page: %s: %s" % (dir, name))
+		logger.debug("is page: %s: %s" % (dir, name))
 		header = open(os.path.join(self.source_dir, dir, name)).read(3)
 		return header == "---"
 

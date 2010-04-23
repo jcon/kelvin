@@ -78,6 +78,10 @@ Blog posts expose several other properties to templates in addition to the page 
 * url: The rendered URL relative to site root
 * date: The date of the post
 
+h3. Category Pages
+
+Kelvin will render category archives if the site configures a category template.  By default, Kelvin will look for a template called category.html and output all categories under <site output>/category/<category name>.  If the template cannot be found, Kelvin will not output category archives.  These settings can be overridden by creating a settings.py file in your site's _extension directory and defining the CATEGORY_TEMPLATE and/or CATEGORY_OUTPUT_DIR properties.
+
 h2. Developing Against
 
 It's fairly straightforward to get setup using Kelvin.  You'll just need to grab the source from github and install its dependencies.  Kelvin requires the following packages: pyyaml 3.09, Jinja2 2.4.1.  You should be able to install both of these using __pip__.
