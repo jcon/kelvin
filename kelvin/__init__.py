@@ -28,7 +28,6 @@ def enable_logging():
     logger.addHandler(ch)
 
 
-
 def datetimeformat(value, format='%d %b %Y'):
     """
     Simple filter for jinja2 to help print out dates nicely
@@ -167,7 +166,7 @@ class Post(Page):
         self.outdir = os.path.join(self.dest_dir, m.group(1), m.group(2), m.group(3))
         self.outfile = "%s.html" % m.group(4)
         
-    def topics(self):
+    def categories(self):
         return re.split(r'/', self.dir)[1:]
         
     def __str__(self):
@@ -189,6 +188,7 @@ class Site:
         self.env = Environment(loader=FileSystemLoader(self.template_dirs))
         self.env.filters['datetimeformat'] = datetimeformat
 
+
     def transform(self):
         logger.info("doing Site.transform()")
         self.load_items()
@@ -199,10 +199,30 @@ class Site:
         for p in items:
             logger.debug(p.__class__.__name__ + "|%(dir)s|%(name)s" % vars(p))
             p.output(self)
-            
 
+        self.render_categories(self.categories, "category.html", "category")    
+    
+    def render_categories(self, categories, template_name, basedir):
+        try:
+            t = self.get_template(template_name)
+        except:
+            logger.warning("No category template defined: %s, skipping output" % template_name)
+            return
+            
+        for category in categories.keys():
+            logger.info("Creating category: %s" % category)
+            outdir = os.path.join(self.dest_dir, basedir, category)
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
+            with open(os.path.join(outdir, "index.html"), "w") as outfile:
+                output = t.render(page={'title':'All %s Posts' % category},
+                                    site=self,
+                                    category=category,
+                                    posts=categories[category])
+                outfile.write(output)
+                    
     def load_items(self):
-        self.topics = { }
+        self.categories = { }
         for root, dirs, files in os.walk(self.source_dir):
             basedir = root[len(self.source_dir) + 1:]
             if re.match('^.git', basedir):
@@ -220,10 +240,10 @@ class Site:
                 elif re.match(r'^_posts', basedir):
                     post = Post(self.source_dir, self.dest_dir, basedir, f)
                     self.posts.append(post)
-                    for topic in post.topics():
-                        if not self.topics.has_key(topic):
-                            self.topics[topic] = []
-                        self.topics[topic].append(post)
+                    for category in post.categories():
+                        if not self.categories.has_key(category):
+                            self.categories[category] = []
+                        self.categories[category].append(post)
                 elif self.is_page(basedir, f):
                     self.pages.append(Page(self.source_dir, self.dest_dir, basedir, f))
                 else:
@@ -232,8 +252,8 @@ class Site:
         def post_cmp(left, right):
             return -1 * cmp(left.date, right.date)
         self.posts.sort(post_cmp)
-        for topic in self.topics:
-            self.topics[topic].sort(post_cmp)
+        for category in self.categories:
+            self.categories[category].sort(post_cmp)
 
     def is_page(self, dir, name):
 		logging.debug("is page: %s: %s" % (dir, name))

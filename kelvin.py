@@ -41,7 +41,6 @@ def main():
         source_dir = args[0]
         dest_dir = args[1]
 
-
     maybe_extend_pythonpath(source_dir)
     
     site = kelvin.Site(source_dir, dest_dir)
