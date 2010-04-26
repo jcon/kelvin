@@ -251,7 +251,8 @@ class Site:
         self.categories = { }
         for root, dirs, files in os.walk(self.source_dir):
             basedir = root[len(self.source_dir) + 1:]
-            if re.match('^.git', basedir):
+            # skip all dot directories
+            if re.match('^\..*', basedir):
                 logger.debug("skipping tree %s" % basedir)
                 continue
             logger.debug("basedir: %s" % basedir)
