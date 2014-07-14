@@ -7,15 +7,35 @@ import sys
 import re
 import shutil
 import logging
+import codecs
+import locale
 from datetime import datetime
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+ENCODING=locale.getpreferredencoding()
+
 DEFAULT_SETTINGS = {
     'CATEGORY_TEMPLATE': 'category.html',
     'CATEGORY_OUTPUT_DIR': 'category',
 }
+
+formatters={}
+try:
+    import markdown2
+    formatters['markdown']=markdown2.markdown
+except ImportError:
+    pass
+
+try:
+    from docutils.core import publish_string
+    def rst_formatter(body):
+        parts=publish_parts(source=body, writer_name='html')
+        return parts['body']
+    formatters['rst']=rst_formatter
+except ImportError:
+    pass
 
 class NullHandler(logging.Handler):
     """
@@ -68,7 +88,8 @@ class File:
         Returns a file object referencing the source file option
         suitable for reading.
         """
-        return open(os.path.join(self.source_dir, self.dir, self.name))
+        return codecs.open(os.path.join(self.source_dir, self.dir, self.name),
+                           'r', ENCODING)
 
     def mkdirs(self):
         """
@@ -135,7 +156,16 @@ class Page(File):
                      self.content, re.MULTILINE | re.DOTALL)
         if m:
             self.data = yaml.load(m.group(1))
-            self.body = self.content[len(m.group(0)):]
+            body = self.content[len(m.group(0)):]
+            if self.data.has_key('fmt'):
+                try:
+                    formatter=formatters[self.data['fmt']]
+                    self.body=formatter(body)
+                except KeyError:
+                    logger.exception("No formatter for '%s' found"%(self.data['fmt']))
+                    self.body=body
+            else:
+                self.body=body
         else:
             logger.debug("no match in %(content)s" % vars(self))
 
@@ -145,7 +175,7 @@ class Page(File):
         destination.
         """
         outdir = self.mkdirs()
-        with open(self.destination(), 'w') as f:
+        with codecs.open(self.destination(), 'w', ENCODING) as f:
             logger.debug("data is %s" % self.data)
             if self.data.has_key('layout'):
                 logger.debug("using layout: %s" % self.layout)
@@ -190,6 +220,8 @@ class Post(Page):
 class Site:
     def __init__(self, source_dir, dest_dir):
         logger.debug("Site#init source %s; dest %s" % (source_dir, dest_dir))
+        if source_dir[-1]=='/':
+            source_dir=source_dir[:-1]
         self.source_dir = source_dir
         self.dest_dir = dest_dir
         self.posts = []
@@ -200,7 +232,7 @@ class Site:
         self.template_dirs = (
             os.path.join(self.source_dir, '_layouts'),
         )
-        self.env = Environment(loader=FileSystemLoader(self.template_dirs))
+        self.env = Environment(loader=FileSystemLoader(self.template_dirs,ENCODING))
         self.env.filters['datetimeformat'] = datetimeformat
         
         self.settings = dict(DEFAULT_SETTINGS)
@@ -257,6 +289,7 @@ class Site:
                 continue
             logger.debug("basedir: %s" % basedir)
             for f in files:
+                logger.debug('looking at %s in %s'%(f,basedir))
                 if re.match(r'(?:.*~$|\.DS_Store|\.gitignore|\.git)', f):
                     logger.debug("skipping file %s" % f)
                     continue
@@ -284,8 +317,9 @@ class Site:
 
     def is_page(self, dir, name):
 		logger.debug("is page: %s: %s" % (dir, name))
-		header = open(os.path.join(self.source_dir, dir, name)).read(3)
-		return header == "---"
+                header = open(os.path.join(self.source_dir, dir, name)).read(3)
+                return header == "---"
+
 
     def get_template(self, template):
         return self.env.get_template(template)
