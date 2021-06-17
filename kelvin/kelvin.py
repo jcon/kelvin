@@ -9,7 +9,11 @@ import shutil
 import logging
 from datetime import datetime
 
-import yaml
+from yaml import load as yaml_load
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
 from jinja2 import Environment, FileSystemLoader
 
 DEFAULT_SETTINGS = {
@@ -134,7 +138,7 @@ class Page(File):
         m = re.match(r'^---\s*\n(.*?)\n---\s*\n', 
                      self.content, re.MULTILINE | re.DOTALL)
         if m:
-            self.data = yaml.load(m.group(1))
+            self.data = yaml_load(m.group(1), Loader=Loader)
             self.body = self.content[len(m.group(0)):]
         else:
             logger.debug("no match in %(content)s" % vars(self))
