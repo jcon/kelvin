@@ -40,15 +40,16 @@ The Kelvin engine will traverse through all folders/files on the site.  For all 
 
 A sample Kelvin website that contains two blog posts, a home page and a simple Atom feed file is included with the project is.
 
-h3. Invoking Kelvin
+h3. Running Locally
 
-Invoking Kelvin is very simple; it expects a source directory and an output directory.  It'll overwrite files as necessary in the output directory.  
+To run Kelvin locally, you first need to install [poetry](https://python-poetry.org/docs/#installation).
 
-<notextile>
- <pre class="brush: bash">
-    myserver% kelvin.py [path to source] [path to output]
- </pre>
-</notextile>
+After install poetry, you can invoke Kelvin with two arguments: a source directory and an output directory.  Kelvin will overwrite files as necessary in the output directory.
+
+```bash
+shell% poetry install
+shell% poetry run python -m kelvin [-d] <path to source> <path to output>
+```
 
 h3. Page File Format
 
@@ -90,13 +91,12 @@ Kelvin will render category archives if the site configures a category template.
 
 h2. Developing Against
 
-It's fairly straightforward to get setup using Kelvin.  You'll just need to grab the source from github and install its dependencies.  Kelvin requires the following packages: pyyaml 3.09, Jinja2 2.4.1.  You should be able to install both of these using __pip__.
+You can get started developing against Kelvin using [poetry](https://python-poetry.org/docs/#installation):
 
-<notextile>
- <pre class="brush: bash">
-    myserver% pip install pyyaml jinja2
- </pre>
-</notextile>
+```bash
+shell$ poetry install
+shell$ poetry run python kelvin ...
+```
 
 h2. License
 

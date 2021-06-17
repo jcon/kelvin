@@ -3,7 +3,7 @@
 import os
 import sys
 from optparse import OptionParser
-import kelvin
+from . import kelvin
 
 def maybe_extend_pythonpath(source_dir):
     """
