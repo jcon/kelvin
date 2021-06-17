@@ -147,7 +147,7 @@ class Page(File):
         outdir = self.mkdirs()
         with open(self.destination(), 'w') as f:
             logger.debug("data is %s" % self.data)
-            if self.data.has_key('layout'):
+            if 'layout' in self.data:
                 logger.debug("using layout: %s" % self.layout)
                 t = site.env.get_template(self.layout)
             else:
@@ -166,7 +166,7 @@ class Page(File):
 
     def __getattr__(self, name):
 #        logging.debug("Page:getattr(%s):" % name)
-        if self.data.has_key(name):
+        if name in self.data:
             return self.data[name]
         else:
             raise AttributeError("%s is not found in %s" % (name, type(self)))
@@ -268,7 +268,7 @@ class Site:
                     post = Post(self.source_dir, self.dest_dir, basedir, f)
                     self.posts.append(post)
                     for category in post.categories():
-                        if not self.categories.has_key(category):
+                        if not category in self.categories:
                             self.categories[category] = []
                         self.categories[category].append(post)
                 elif self.is_page(basedir, f):
@@ -276,16 +276,15 @@ class Site:
                 else:
                     self.files.append(File(self.source_dir, self.dest_dir, basedir, f))
 
-        def post_cmp(left, right):
-            return -1 * cmp(left.date, right.date)
-        self.posts.sort(post_cmp)
+        post_date = lambda p: p.date
+        self.posts.sort(key=post_date, reverse=True)
         for category in self.categories:
-            self.categories[category].sort(post_cmp)
+            self.categories[category].sort(key=post_date, reverse=True)
 
     def is_page(self, dir, name):
-		logger.debug("is page: %s: %s" % (dir, name))
-		header = open(os.path.join(self.source_dir, dir, name)).read(3)
-		return header == "---"
+        logger.debug("is page: %s: %s" % (dir, name))
+        header = open(os.path.join(self.source_dir, dir, name)).read(3)
+        return header == "---"
 
     def get_template(self, template):
         return self.env.get_template(template)
