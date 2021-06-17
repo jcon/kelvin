@@ -2,8 +2,8 @@
 
 from __future__ import with_statement
 
+from typing import Any, TextIO, cast, Callable, Dict, List, Match
 import os
-import sys
 import re
 import shutil
 import logging
@@ -13,8 +13,8 @@ from yaml import load as yaml_load
 try:
     from yaml import CLoader as Loader
 except ImportError:
-    from yaml import Loader
-from jinja2 import Environment, FileSystemLoader
+    from yaml import Loader # type: ignore
+from jinja2 import Environment, FileSystemLoader, Template
 
 DEFAULT_SETTINGS = {
     'CATEGORY_TEMPLATE': 'category.html',
@@ -25,16 +25,16 @@ class NullHandler(logging.Handler):
     """
     Simple bit-bucket handler to use for when debugging is not enabled
     """
-    def emit(self, record):
+    def emit(self, record: Any) -> None:
         """Discards all logging records"""
         pass
 
 logger = logging.getLogger("kelvin")
 logger.addHandler(NullHandler())
 
-def enable_logging():
+def enable_logging() -> None:
     """
-    Configures console logging for the application's logger.  By
+    Configures console logging for the application's logger.  By, Dumper
     default, logging operations will not output log statements
     unless the logger has been configured.  The main driver of
     kelvin will control this with a commandline flag.
@@ -47,19 +47,26 @@ def enable_logging():
     logger.addHandler(ch)
 
 
-def datetimeformat(value, format='%d %b %Y'):
+def datetimeformat(value: datetime, format: str ='%d %b %Y') -> str:
     """
     Simple filter for jinja2 to help print out dates nicely
     """
     return value.strftime(format)
 
 class File:
+    source_dir: str
+    dest_dir: str
+    dir: str
+    name: str
+    outdir: str
+    outfile: str
+
     """
     Base class for any time of object on the site.  The file object
     provides basic file related options for translating a file from
     the source folder to the destination site folder.
     """
-    def __init__(self, source_dir, dest_dir, dir, name):
+    def __init__(self, source_dir: str, dest_dir: str, dir: str, name: str):
         self.source_dir = source_dir
         self.dest_dir = dest_dir
         self.dir = dir
@@ -67,14 +74,14 @@ class File:
         self.outdir = os.path.join(self.dest_dir, self.dir)
         self.outfile = self.name
 
-    def open(self):
+    def open(self) -> TextIO:
         """
         Returns a file object referencing the source file option
         suitable for reading.
         """
         return open(os.path.join(self.source_dir, self.dir, self.name))
 
-    def mkdirs(self):
+    def mkdirs(self) -> str:
         """
         Optionally creates the directories in this file's outdir
         path.
@@ -83,13 +90,13 @@ class File:
             os.makedirs(self.outdir)
         return self.outdir
 
-    def destination(self):
+    def destination(self) -> str:
         """
         The fully qualified destination path for this file.
         """
         return os.path.join(self.outdir, self.outfile)
 
-    def output(self, site):
+    def output(self, site: "Site") -> None:
         """
         Translates the source file to its destination form.  For
         a plain file, this operation is a purely a copy.  For 
@@ -98,7 +105,7 @@ class File:
         to the underlying site so that it may apply site data
         as part of its transformation.
         """
-        outdir = self.mkdirs()
+        _ = self.mkdirs()
         source = os.path.join(self.source_dir, self.dir, self.name)
         shutil.copy(source, self.destination()) 
 
@@ -121,7 +128,11 @@ class Page(File):
     my template
     ---
     """
-    def __init__(self, source_dir, dest_dir, dir, name):
+    content: str
+    body: str
+    data: Dict[str, str]
+
+    def __init__(self, source_dir: str, dest_dir: str, dir: str, name: str) -> None:
         File.__init__(self, source_dir, dest_dir, dir, name)
         self.content = self.open().read()
         self.read_data()
@@ -129,7 +140,7 @@ class Page(File):
         if m and m.group(2) == "textile":
             self.outfile = "%s.html" % m.group(1)
 
-    def read_data(self):
+    def read_data(self) -> None:
         """
         Read the metdata and parse it using the YAML parser. 
         It's variables are exposed as attributes directly on this
@@ -143,12 +154,12 @@ class Page(File):
         else:
             logger.debug("no match in %(content)s" % vars(self))
 
-    def output(self, site):
+    def output(self, site: "Site") -> None:
         """
         Translate this page in memory and output it to its
         destination.
         """
-        outdir = self.mkdirs()
+        _ = self.mkdirs()
         with open(self.destination(), 'w') as f:
             logger.debug("data is %s" % self.data)
             if 'layout' in self.data:
@@ -157,18 +168,18 @@ class Page(File):
             else:
                 logger.debug("using file as its own layout: [%s]" % self.body)
                 t = site.env.from_string(self.body)
-            data = {
-                'tuple':(('one', '1'), ('two', '2'), ('three', '3')),
-                'site':site,
-                'page':self
-                }
+            # data: Dict[str, Any] = {
+            #     'tuple':(('one', '1'), ('two', '2'), ('three', '3')),
+            #     'site':site,
+            #     'page':self
+            #     }
             logger.debug(site.posts)
             self.content = t.render(site=site, page=self)
             logger.debug("****\n%s\n****" % self.content)
             f.write(self.content)
 #            logger.debug("writing source! %(name)s" % vars(self))
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> str:
 #        logging.debug("Page:getattr(%s):" % name)
         if name in self.data:
             return self.data[name]
@@ -176,23 +187,32 @@ class Page(File):
             raise AttributeError("%s is not found in %s" % (name, type(self)))
 
 class Post(Page):
-    def __init__(self, source_dir, dest_dir, dir, name):
+    def __init__(self, source_dir: str, dest_dir: str, dir: str, name: str):
         Page.__init__(self, source_dir, dest_dir, dir, name)
         m = re.match(r'^(\d+)-(\d+)-(\d+)-([^.]*).*$', self.name)
+        if m == None:
+            raise Exception("Unexpected name format")
+        m = cast(Match[str], m) # Needed by mypy, pyright says its unnecessary
         date_string = "%s %s %s" % (m.group(1), m.group(2), m.group(3))
         self.date = datetime.strptime(date_string, "%Y %m %d")
         self.url = "/%s/%s/%s/%s.html" % (m.group(1), m.group(2), m.group(3), m.group(4))
         self.outdir = os.path.join(self.dest_dir, m.group(1), m.group(2), m.group(3))
         self.outfile = "%s.html" % m.group(4)
         
-    def categories(self):
+    def categories(self) -> List[str]:
         return re.split(r'/', self.dir)[1:]
         
-    def __str__(self):
+    def __str__(self) -> str:
         return "%s (%s)" % (self.title, self.url)
 
 class Site:
-    def __init__(self, source_dir, dest_dir):
+    posts: List[Post]
+    files: List[File]
+    pages: List[Page]
+    categories: Dict[str, List[Post]]
+    env: Environment
+
+    def __init__(self, source_dir: str, dest_dir: str):
         logger.debug("Site#init source %s; dest %s" % (source_dir, dest_dir))
         self.source_dir = source_dir
         self.dest_dir = dest_dir
@@ -211,18 +231,18 @@ class Site:
         try:
             # allow sites to override settings by adding all properties
             # defined within _extensions.settings
-            from _extensions import settings
-            for setting in dir(settings):
+            from _extensions import settings # type: ignore
+            for setting in dir(settings):    # not needed by mypy, but an error for pyright 
                 if setting == setting.upper():
                     self.settings[setting] = getattr(settings, setting)
         except:
             # In case someone needs to debug a problem in the site's settings files
             logger.exception("no site specific settings or overrides found")         
 
-    def transform(self):
+    def transform(self) -> None:
         logger.info("doing Site.transform()")
         self.load_items()
-        items = []
+        items: List[File] = []
         items.extend(self.posts)
         items.extend(self.files)
         items.extend(self.pages)
@@ -232,7 +252,7 @@ class Site:
 
         self.render_categories(self.categories, self.settings['CATEGORY_TEMPLATE'], self.settings['CATEGORY_OUTPUT_DIR'])    
     
-    def render_categories(self, categories, template_name, basedir):
+    def render_categories(self, categories: Dict[str, List[Post]], template_name: str, basedir: str) -> None:
         try:
             t = self.get_template(template_name)
         except:
@@ -251,9 +271,9 @@ class Site:
                                     posts=categories[category])
                 outfile.write(output)
                     
-    def load_items(self):
+    def load_items(self) -> None:
         self.categories = { }
-        for root, dirs, files in os.walk(self.source_dir):
+        for root, _, files in os.walk(self.source_dir):
             basedir = root[len(self.source_dir) + 1:]
             # skip all dot directories
             if re.match('^\..*', basedir):
@@ -280,15 +300,15 @@ class Site:
                 else:
                     self.files.append(File(self.source_dir, self.dest_dir, basedir, f))
 
-        post_date = lambda p: p.date
+        post_date: Callable[[Post], datetime] = lambda p: p.date
         self.posts.sort(key=post_date, reverse=True)
         for category in self.categories:
             self.categories[category].sort(key=post_date, reverse=True)
 
-    def is_page(self, dir, name):
+    def is_page(self, dir: str, name: str) -> bool:
         logger.debug("is page: %s: %s" % (dir, name))
         header = open(os.path.join(self.source_dir, dir, name)).read(3)
         return header == "---"
 
-    def get_template(self, template):
+    def get_template(self, template: str) -> Template:
         return self.env.get_template(template)

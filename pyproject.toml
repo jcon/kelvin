@@ -8,6 +8,13 @@ authors = ["Jim Connell <james.d.connell@gmail.com>"]
 python = "^3.8"
 PyYAML = "^5.4.1"
 Jinja2 = "^3.0.1"
+mypy = "^0.902"
+types-PyYAML = "^5.4.3"
+
+[tool.pyright]
+include = ["kelvin", "test"]
+strict = ["kelvin", "test"]
+stubPath = "./stubs"
 
 [tool.poetry.dev-dependencies]
 
