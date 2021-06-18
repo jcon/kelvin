@@ -1,6 +1,6 @@
 import os
 import sys
-from optparse import OptionParser
+from tap import Tap
 from kelvin import lib
 
 def maybe_extend_pythonpath(source_dir: str) -> None:
@@ -18,30 +18,23 @@ def maybe_extend_pythonpath(source_dir: str) -> None:
     else:
         lib.logger.info("no extension dir exists %s" % extension_dir)
 
+
+class Arguments(Tap):
+    source_dir: str     # The source directory.
+    dest_dir: str       # The directory to write the generated site.
+    debug: bool = False # If true, prints out debugging information.
+
+    def configure(self) -> None:
+        self.add_argument('source_dir')
+        self.add_argument('dest_dir')
+
+
 def main() -> None:
-    usage = """
+    args = Arguments().parse_args()
 
-%prog [options] <path to source> <path to output>   # <input> -> <output>
-"""
-    parser = OptionParser(usage = usage)
-    # Enables trace logging.  our callback needs 4 parameters, so we just use a
-    # lambda function as a wrapper
-    parser.add_option("-d", "--debug",
-                      help = "print out debugging trace information",
-                      action = "callback",
-                      callback = lambda w, x, y, z: lib.enable_logging())
-    (options, args) = parser.parse_args()
-    dirname = os.path.dirname(__file__)
-    if len(args) != 2:
-        parser.error("expected both an input path and an output path")
-        sys.exit(1)
-    elif len(args) == 2:
-        source_dir = args[0]
-        dest_dir = args[1]
-
-    maybe_extend_pythonpath(source_dir)
+    maybe_extend_pythonpath(args.source_dir)
     
-    site = lib.Site(source_dir, dest_dir)
+    site = lib.Site(args.source_dir, args.dest_dir)
     site.transform()
 
 if __name__ == "__main__":
