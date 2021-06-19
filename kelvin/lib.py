@@ -2,7 +2,7 @@
 
 from __future__ import with_statement
 
-from typing import Any, TextIO, cast, Callable, Dict, List, Match
+from typing import Any, TextIO, Callable, Dict, List
 import os
 import re
 import shutil
@@ -202,9 +202,8 @@ class Post(Page):
     def __init__(self, source_dir: str, dest_dir: str, dir: str, name: str):
         Page.__init__(self, source_dir, dest_dir, dir, name)
         m = re.match(r"^(\d+)-(\d+)-(\d+)-([^.]*).*$", self.name)
-        if m == None:
+        if m is None:
             raise Exception("Unexpected name format")
-        m = cast(Match[str], m)  # Needed by mypy, pyright says its unnecessary
         date_string = "%s %s %s" % (m.group(1), m.group(2), m.group(3))
         self.date = datetime.strptime(date_string, "%Y %m %d")
         self.url = "/%s/%s/%s/%s.html" % (
